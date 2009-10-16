@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# Creates a branch (copy) of the specified WC's branch and checks it out.
+#
+# Usage:
+#
+#   svnbranch base-url branch-url wc-path
+#
+
+set -e 
+
+if test $# != 3; then
+	echo "Usage: svnbranch BASE-URL BRANCH-URL WC-PATH"
+	exit 1
+fi
+
+svn copy "$1" "$2" -m "Branching off $(basename $1) to $(basename $2)"
+svn co "$2" "$3"
+cd "$3"
+rev=`svnversion . | awk -F: '{print $NF}' | sed -e '1,$s/[a-zA-Z]*//g'`
+svn ps merge-baserev $rev .
+svn ps merge-revision $rev .
+svn ps merge-url "$1" .
+

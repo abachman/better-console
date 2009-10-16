@@ -1,0 +1,133 @@
+#!/usr/bin/env ruby
+# vim: set filetype=ruby:
+#
+#  <?xml version="1.0"?>
+#  <status>
+#    <target path=".">
+#    <entry path=".">
+#      <wc-status props="modified" item="normal" revision="2978">
+#        <commit revision="2978">
+#          <author>adam</author>
+#          <date>2009-09-18T18:46:22.341010Z</date>
+#        </commit>
+#      </wc-status>
+#    </entry>
+#    <entry path="app/presenters/feature_tab_presenter.rb">
+#      <wc-status props="none" item="modified" revision="2978">
+#        <commit revision="2964">
+#          <author>adam</author>
+#          <date>2009-09-16T19:29:58.884457Z</date>
+#        </commit>
+#      </wc-status>
+#    </entry>
+#    ...
+#  </status>
+
+
+require 'rubygems'
+require 'hpricot'
+
+COLOR_NONE  = "\033[0;m"
+COLOR_RED   = "\033[0;31m"
+COLOR_GREEN = "\033[0;32m"
+COLOR_GOLD  = "\033[1;33m"
+COLOR_BLUE  = "\033[1;34m"
+COLOR_PURPLE= "\033[1;35m"
+BACK_GREY   = "\033[0;40m"
+STATUS_CHECK = {
+  'normal'      => COLOR_NONE   + ' M', # modified directory properties
+  'modified'    => COLOR_BLUE   + 'M',
+  'added'       => COLOR_GREEN  + 'A',
+  'unversioned' => BACK_GREY    + '?',
+  'deleted'     => COLOR_PURPLE + 'D',
+  'missing'     => COLOR_RED    + '!'
+}
+
+class SvnStatus
+  def initialize; parse_status; end
+
+private
+  def parse_status
+    doc, @entries =  Hpricot::XML(status_xml), []
+    (doc/:status/:entry).each do |entry|
+      (entry/:'wc-status').each do |sts| 
+        path = entry.attributes['path']
+        status = sts.attributes['item']
+        @entries << {:path => path, :status => status}
+      end
+    end
+  end 
+
+  def status_xml 
+    @status_xml ||= `svn status --xml #{ARGV.join}`.chomp
+  end
+
+  def max_path
+    @entries.inject(0) {|mx, e| mx > (other = e[:path].length) ? mx : other}
+  end
+
+  # Check diff of each file and give a rough measure of how much the file was
+  # changed. Kind of like if you took the first colum of `svn diff`, stripped 
+  # all non-change lines, and then laid the resulting list out horizontally.
+  def diffs 
+    @diffs ||= begin
+      diff = `svn diff`.split("\n").map {|l| l.chomp}
+      _diffs = {}
+      in_diff = false
+      in_path = false
+      path = nil
+      diff.each do |line|
+        if /Index:/ =~ line 
+          path = /Index: (.*)/.match(line)[1]
+          _diffs[path] = ' '
+          in_path = true
+          in_diff = false
+          next
+        end
+
+        if in_path and !in_diff and /^@@/ =~ line
+          in_diff = true
+          next
+        end
+
+        if in_diff and in_path
+          if /^\+/ =~ line
+            _diffs[path] += '+'
+          elsif /^-/ =~ line
+            _diffs[path] = _diffs[path] + '-'
+          end
+        end
+      end
+      _diffs.map do |k, v| 
+        _diffs[k] = v.split('').map do |chr| 
+          { '+' => "#{COLOR_GREEN}+", 
+            '-' => "#{COLOR_RED}-"}[chr]
+        end.join() + "#{COLOR_NONE}"
+      end
+      _diffs
+    end
+  end
+
+  def color_stat status
+    begin
+      STATUS_CHECK[status] + COLOR_NONE
+    rescue
+      puts "UNRECOGNIZED STATUS: #{COLOR_RED}#{status}#{COLOR_NONE}"
+      raise
+    end
+  end
+
+  def color_diff path
+    diffs[path]
+  end
+
+public
+  def display 
+    @entries.each do |e|
+      printf "%-19s%-#{max_path + 4}s%s\n", color_stat(e[:status]), e[:path], color_diff(e[:path])
+    end
+  end
+end
+
+svnst = SvnStatus.new
+svnst.display

@@ -1,0 +1,146 @@
+#!/usr/bin/env ruby
+# vim: set filetype=ruby:
+
+require 'rubygems'
+require 'hpricot'
+
+class SvnLog
+  attr_accessor :authors
+  attr_accessor :entries
+  attr_accessor :max_author
+  
+  # Enumerable of bash colors. Works best on dark background.
+  COLORS = [31, 32, 33, 34, 35, 36].cycle
+
+  def initialize; parse_log; end
+#  <logentry revision="3129">
+#    <author>adam</author>
+#    <date>2009-10-01T18:01:44.072821Z</date>
+#    <paths>
+#      <path
+#         action="M">/chase_comparison_backend/branches/oct_22/public/javascripts/subform.js</path>
+#      <path
+#         action="M">/chase_comparison_backend/branches/oct_22/app/views/special_card_faqs/_modal_faq_editor.html.erb</path>
+#      <path
+#         action="M">/chase_comparison_backend/branches/oct_22/app/helpers/application_helper.rb</path>
+#      <path
+#         action="M">/chase_comparison_backend/branches/oct_22/public/stylesheets/forms.css</path>
+#      <path
+#         action="M">/chase_comparison_backend/branches/oct_22/app/views/special_card_faqs/_special_card_faq.html.erb</path>
+#      <path
+#         action="M">/chase_comparison_backend/branches/oct_22/app/helpers/feature_groups_helper.rb</path>
+#    </paths>
+#    <msg>half working dynamic resortable RTEs for presidential plus FAQs</msg>
+#  </logentry>
+
+private
+  def parse_log 
+    doc, @entries =  Hpricot::XML(log_xml), []
+    
+    if @show_branch
+      @paths = {}
+    end
+    
+    (doc/:log/:logentry).each do |entry|
+      msg = (entry/:msg).text
+      date = DateTime.parse((entry/:date).text)
+      begin
+        msg = msg.split("\n").first.chomp.slice(0, 80)
+      rescue 
+        msg = ''
+      end
+
+      if @show_branch 
+        # pick a sample path from each entry
+        @paths[entry.attributes['revision']] = (entry/:paths/:path).first.innerText
+        puts @paths[entry.attributes['revision']]
+      end
+
+      @entries << {:msg => msg, 
+                   :author => (entry/:author).text, 
+                   :rev => entry.attributes['revision'],
+                   :date => date }
+    end
+  end 
+
+  def log_xml 
+    @stop_on_copy = false; @show_branch = false; @show_date = false
+
+    args = " #{ARGV.join(' ')} "
+     
+    if /\s-s\s/ =~ args 
+      puts ':stop on copy'
+      args = args.gsub(/\s-s\s/, ' --stop-on-copy ')
+      @stop_on_copy = true
+    end
+
+    if /\s-b\s/ =~ args
+      puts ':show branch'
+      args = args.gsub(/\s-b\s/," -v ")
+      if !@stop_on_copy
+        @show_branch = true
+      end
+    end
+
+    if /\s-d\s/ =~ args
+      puts ':show date'
+      args = args.gsub(/\s-d\s/,' ')
+      @show_date = true
+    end
+
+    puts "svn log --xml #{args}"
+    @log_xml ||= `svn log --xml #{args}`.chomp
+  end
+
+  # a hash of author name => color val
+  def authors
+    @authors ||= begin
+      auths = entries.map {|e| e[:author]}.uniq
+      auths.inject({}) {|acc, a| acc[a] = SvnLog::COLORS.next; acc}
+    end
+  end
+public
+
+  def max_author
+    @max_author ||= (@entries.map {|e| e[:author].length}).max
+  end
+
+  def colorize author, message
+    "\033[0;#{authors[author]}m#{message}\033[0;m"
+  end
+
+  def greenify m
+    "\033[0;32m#{m}\033[0;m"
+  end
+
+  def blueify m
+    "\033[1;34m#{m}\033[1;m"
+  end
+
+  def goldify m
+    "\033[1;33m#{m}\033[1;m"
+  end
+
+  def greyback m
+    "\033[0;40m#{m}\033[0;m"
+  end
+
+  public
+  def display
+    @entries.each do |e|
+      name = "%-#{max_author}s"
+      if @show_date 
+        date = sprintf " %-12s", e[:date].strftime("%m/%d %H:%M")
+      else 
+        date = ''
+      end
+      printf("%5i:#{ colorize(e[:author], name) }#{ date } %s\n",
+             e[:rev], 
+             e[:author], 
+             e[:msg])
+    end
+  end
+end
+ 
+svnlog = SvnLog.new
+svnlog.display

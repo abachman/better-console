@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Merges changes from trunk to branch or visa-versa.
+#
+# This script uses the following properties to track merges:
+#
+#     merge-url         The "trunk" URL.
+#     merge-revision    The last revision that was merged.
+#     merge-baserev     The revision that created the branch.
+#
+# These properties are 
+#
+# Usage:
+#
+#   svnmerge [branch-url]
+#
+
+if test $# -gt 1; then
+	echo Usage: svnmerge [branch-url]
+	exit 1
+fi
+
+svn up
+
+if test $# = 1; then
+	echo Merging changes from branch...
+	baserev=`svn pg merge-baserev $1`
+	svn merge -r $baserev:HEAD $1
+	# Remove merge-* properties from branch...
+	svn revert .
+else
+	echo Merging changes from trunk...
+	rev=`svnversion . | awk -F: '{print $NF}' | sed -e '1,$s/[a-zA-Z]*//g'`
+	oldrev=`svn pg merge-revision .`
+	trunk=`svn pg merge-url .`
+	svn merge -r $oldrev:HEAD $trunk
+
+	svn ps merge-revision $rev .
+fi
+

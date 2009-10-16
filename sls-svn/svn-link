@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e 
+
+if [ -n "$1" ]; then
+  if [ -d "$1" ]; then 
+    OLDIR=`pwd`
+    cd $1
+  fi
+fi
+SVNLINK=`svn info | grep URL | cut -d ' ' -f 2`
+echo $SVNLINK
+if [ -n "$OLDIR" ]; then
+  cd $OLDIR
+fi

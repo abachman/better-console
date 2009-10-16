@@ -1,0 +1,73 @@
+#!/usr/bin/env ruby
+
+require 'readline'
+
+class SvnAdder
+  attr_accessor :header
+  attr_accessor :files
+
+  def initialize
+    set_vars
+  end
+
+  def set_vars
+    @path, @url = `svn info | grep -P '^Path|^URL'`.split("\n")
+    @files = `svn st | grep ^? | awk '{print $2}'`.split
+  end
+
+  def header
+    if !@header
+      @header = @path + "\n"
+      @header += @url + "\n"
+      @header +=  "Looking at \n\t#{files.join("\n\t")}\n"
+    end
+    @header
+  end
+
+  def count 
+    files.size
+  end
+end
+
+svn = SvnAdder.new
+
+puts svn.header
+
+if svn.files.size > 0
+  n = 1 
+  quit = false
+
+  svn.files.each do |file|
+    puts "[#{n} of #{svn.count}] #{File.directory?(file) ? "directory" : "file"} \e[32m#{file}\e[0m ([A]dd|[s]kip|[i]gnore|[q]uit|)"
+    line = Readline::readline '> '
+    choice = line.downcase.strip[0, 1]
+    case choice
+    when 'i'
+      # Add ignore file to .svnignore and then set the svn property on the appropriate directory.
+      puts "ignoring #{file}"
+      dirname, basename = File.split(file)
+      puts "\tsvn pg svn:ignore #{dirname} > #{dirname}/.svnignore"
+      `svn pg svn:ignore #{dirname} > #{dirname}/.svnignore`
+      puts "\techo '#{File.basename(file)}' >> #{dirname}/.svnignore"
+      `echo '#{File.basename(file)}' >> #{dirname}/.svnignore`
+      puts "\tsvn ps svn:ignore -F #{dirname}/.svnignore #{dirname}"
+      `svn ps svn:ignore -F #{dirname}/.svnignore #{dirname}`
+      # add the .svnignore file if it's not already under source control.
+      `(svn st #{dirname}/.svnignore | grep -q ?) && svn add #{dirname}/.svnignore`
+    when 'a', ''
+      puts "adding #{file}"
+      `svn add #{file}`
+    when 's'
+      puts "skipping #{file}" 
+    when 'q'
+      quit = true
+      break
+    end
+    n += 1
+    break if quit
+  end
+else
+  $stdout.write "No files to ignore\n"; $stdout.flush
+end
+
+
