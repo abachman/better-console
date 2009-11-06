@@ -33,6 +33,7 @@ COLOR_GREEN = "\033[0;32m"
 COLOR_GOLD  = "\033[1;33m"
 COLOR_BLUE  = "\033[1;34m"
 COLOR_PURPLE= "\033[1;35m"
+COLOR_TEAL  = "\033[0;36m"
 BACK_GREY   = "\033[0;40m"
 STATUS_CHECK = {
   'normal'      => COLOR_NONE   + ' M', # modified directory properties
@@ -40,7 +41,8 @@ STATUS_CHECK = {
   'added'       => COLOR_GREEN  + 'A',
   'unversioned' => BACK_GREY    + '?',
   'deleted'     => COLOR_PURPLE + 'D',
-  'missing'     => COLOR_RED    + '!'
+  'missing'     => COLOR_RED    + '!',
+  'external'    => COLOR_TEAL   + 'X'
 }
 
 class SvnStatus

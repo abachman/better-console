@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ svn log -q --incremental --stop-on-copy | tail -n 1 | cut -d ' ' -f 1 | awk '{ sub(/r/, "", $0); print $0 }'

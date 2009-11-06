@@ -1,0 +1,50 @@
+#!/bin/bash
+# Run a given command whenever one of a list of files or directories is written to. 
+# 
+# This is a homegrown "autotest". 
+# 
+# Requires inotify-tools: `sudo apt-get install inotify-tools` or http://inotify-tools.sourceforge.net/
+# 
+# Examples: 
+#  
+#   # Run whenever the model file or unit test is modified.
+#   ./run_when_changed test/unit/model_test.rb test/unit/model_test.rb app/models/model.rb
+# 
+# Does not play well with rake
+
+set -e
+
+if [ -z "$(which inotifywait)" ]; then
+  echo "Could not find 'inotifywait' command, try:\n\tsudo apt-get install inotify-tools"
+  exit 1
+fi
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 RUNFILE WATCH_FILE [WATCH_FILE_2 ...]"
+  exit 1
+fi
+
+command=$1
+shift 1
+
+if [ ! -f $test_file ]; then
+  echo "Could not find file to run: $test_file"
+  exit 1
+fi
+
+RUN_PID=
+
+# Make sure to kill test process when this script is stopped.
+
+# Watch all files and directories to know when to start running
+inotifywait -mr --format '%w' -e modify $@ | while read file; do
+  time=$(date +%H%M%S)
+  #  echo "SIGNAL $time $file"
+  if [[ -z "$RUN_PID" || -z "$(ps aux | grep $RUN_PID | grep -v grep)" ]]; then
+    trap - INT TERM EXIT
+    echo "Starting $command:$RUN_PID."
+    $command &
+    RUN_PID=$!
+    trap 'if [ -n "$(ps aux | grep $RUN_PID | grep -v grep)" ]; then echo "killing $RUN_PID"; kill $RUN_PID; fi; exit $?' INT TERM EXIT
+  fi
+done
