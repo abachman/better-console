@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e 
+
+function create_from_config() {
+  if [ -f "$1" ]; then
+    for db in $(cat $1 | grep database | cut -d ' ' -f 4); do
+      echo "CREATING DATABASE: $db"
+      echo "CREATE DATABASE IF NOT EXISTS \`$db\`;" | mysql -u root -psecret
+    done
+  else 
+    "COULD NOT FIND $1"
+  fi
+}
+
+create_from_config config/development/database.yml
+create_from_config config/test/database.yml
