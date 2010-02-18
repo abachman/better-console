@@ -27,10 +27,10 @@ fi
 command=$1
 shift 1
 
-if [ ! -f $test_file ]; then
-  echo "Could not find file to run: $test_file"
-  exit 1
-fi
+# if [ ! -f $test_file ]; then
+#   echo "Could not find file to run: $test_file"
+#   exit 1
+# fi
 
 RUN_PID=
 
