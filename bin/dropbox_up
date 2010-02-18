@@ -1,0 +1,8 @@
+#!/bin/bash
+
+rsync -rvtE ~/projects/ ~/Dropbox/projects/work --exclude=tmp/ --exclude=*.pyc
+rsync -rvt ~/.vim/ ~/Dropbox/home/.vim/ --exclude=.git/ --exclude=.gitignore --exclude=.svn/ --exclude=tmp/ --exclude=*.pyc
+rsync -v ~/.vimrc ~/Dropbox/home/.vimrc
+rsync -v ~/.gvimrc ~/Dropbox/home/.gvimrc
+rsync -v ~/.bashrc ~/Dropbox/home/.bashrc
+rsync -v ~/.screenrc ~/Dropbox/home/.screenrc
