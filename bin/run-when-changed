@@ -1,18 +1,19 @@
 #!/bin/bash
-# Run a given command whenever one of a list of files or directories is written to. 
-# 
-# This is a homegrown "autotest". 
-# 
+# Run a given command whenever one of a list of files or directories is written to.
+#
+# This is a homegrown "autotest".
+#
 # Requires inotify-tools: `sudo apt-get install inotify-tools` or http://inotify-tools.sourceforge.net/
-# 
-# Examples: 
-#  
+#
+# Examples:
+#
 #   # Run whenever the model file or unit test is modified.
 #   ./run_when_changed test/unit/model_test.rb test/unit/model_test.rb app/models/model.rb
-# 
+#
 # Does not play well with rake
 
 set -e
+set -m # enable job control
 
 if [ -z "$(which inotifywait)" ]; then
   echo "Could not find 'inotifywait' command, try:\n\tsudo apt-get install inotify-tools"

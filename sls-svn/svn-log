@@ -3,6 +3,7 @@
 
 require 'rubygems'
 require 'hpricot'
+require 'date'
 
 class SvnLog
   attr_accessor :authors
@@ -43,7 +44,7 @@ private
     
     (doc/:log/:logentry).each do |entry|
       msg = (entry/:msg).text
-      date = DateTime.parse((entry/:date).text)
+      date = ::DateTime.parse((entry/:date).text)
       begin
         msg = msg.split("\n").first.chomp.slice(0, 80)
       rescue 
