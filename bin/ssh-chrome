@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# launch remote google-chrome via X11Forwarding
+ssh -fX remote google-chrome
+
+
