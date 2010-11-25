@@ -1,0 +1,5 @@
+#!/bin/bash
+
+rsync -rvtE ~/Dropbox/projects/work ~/projects/ --exclude=.git/ --exclude=.gitignore --exclude=.svn/ --exclude=tmp/ --exclude=*.pyc
+
+
