@@ -28,9 +28,10 @@ while(true)
        "\"#{rev} by #{who}\n\n#{what}\""
       ]
       # puts "notify-send #{notify_opts.join(' ')}"
+      `mkdir -p tmp && echo $(date) >> tmp/svn-update`
       `notify-send #{notify_opts.join(' ')}`
       last_rev_alerted = rev
     end
   end
-  sleep(180)
+  sleep(20)
 end
